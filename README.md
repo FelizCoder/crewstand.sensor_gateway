@@ -77,7 +77,7 @@ The CrewStand Pico Interface repository contains the following components:
         ghcr.io/felizcoder/crewstand.sensor_gateway:latest
     ```
 
-   - Ensure you replace `/path/to/your/config.py` with the actual path to your configuration file and `/dev/serial/by-id/your-serial-device` with the path to your serial device.
+   - Ensure you replace `/path/to/your/.env` with the actual path to your enviroment file and `/dev/serial/by-id/your-serial-device` with the path to your serial device.
 
 ## Usage
 
