@@ -16,7 +16,7 @@ class Config(BaseSettings):
     serial_baud_rate: int = 192000
     backend_sensor_url: HttpUrl
 
-    
     model_config = SettingsConfigDict(env_file=env_file)
-    
+
+
 settings = Config()

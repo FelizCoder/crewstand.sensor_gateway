@@ -11,7 +11,7 @@ class SensorReading(BaseModel):
         description="Timestamp of the reading in nanoseconds since Epoch",
         examples=[1730906908814683100],
     )
-    
+
     @classmethod
     def new_reading(cls, value: float) -> "SensorReading":
         timestamp_ns = time.time_ns()
