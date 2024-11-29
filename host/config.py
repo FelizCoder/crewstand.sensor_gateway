@@ -11,10 +11,11 @@ env_file = os.path.join(
 
 
 class Config(BaseSettings):
-    read_interval_s: float = 1.0
-    serial_port: str
-    serial_baud_rate: int = 192000
     backend_sensor_url: HttpUrl
+    read_interval_s: float = 1.0
+    sensor_count: int = 1
+    serial_baud_rate: int = 192000
+    serial_port: str
 
     model_config = SettingsConfigDict(env_file=env_file)
 

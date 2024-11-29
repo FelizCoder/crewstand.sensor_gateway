@@ -48,10 +48,11 @@ The CrewStand Pico Interface repository contains the following components:
 
     | Environment Variable | Description                         | Example Value         |
     |----------------------|-------------------------------------|-----------------------|
+    | `backend_sensor_url` | URL of the backend server           | `http://172.17.0.1:5000` |
     | `read_interval_s`    | Interval between reads in seconds   | `0.5`                 |
-    | `serial_port`        | Serial port to connect to           | `"/dev/ttyACM0"`      |
+    | `sensor_count`       | Number of sensors to read           | `2`                   |
     | `serial_baud_rate`   | Baud rate for serial communication  | `250000`              |
-    | `backend_url`        | URL of the backend server           | `http://localhost:5000/sensor/reading`|
+    | `serial_port`        | Serial port to connect to           | `"/dev/ttyACM0"`      |
 
 3. **Start the Host Script**
     ```sh

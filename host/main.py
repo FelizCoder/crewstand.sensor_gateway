@@ -24,18 +24,29 @@ def signal_handler(sig, frame):
     logging.info("Interrupt received. Stopping...")
 
 
-def read_sensor(ser: serial.Serial) -> SensorReading:
-    """Reads the sensor data from the serial port.
+def read_sensor(ser: serial.Serial, sensor_id: int) -> SensorReading:
+    """
+    Reads the sensor data from the serial port.
 
     Args:
         ser (serial.Serial): The serial object connected to the sensor.
+        sensor_id (int): The ID of the sensor to read.
 
     Returns:
         SensorReading or None: The sensor reading object or None if the reading failed.
+
+    Raises:
+        ValueError: If the sensor data received is not a valid float.
+        Exception: If any other error occurs during the reading process.
+
+    Notes:
+        This function sends a command to the sensor to request a reading and then waits for a response.
+        If the response is empty or cannot be converted to a float, an error is logged and None is returned.
     """
+
     try:
         logging.debug("Requesting sensor reading...")
-        sensor_request_command = b"s"
+        sensor_request_command = bytes(sensor_id)
         ser.write(sensor_request_command)
         response = ser.read_until().decode("utf-8").strip()
 
@@ -58,48 +69,51 @@ def read_sensor(ser: serial.Serial) -> SensorReading:
     return None
 
 
-def send_to_backend(sensor_reading: SensorReading):
+def send_to_backend(sensor_reading: SensorReading, sensor_id: int) -> None:
     """
-    Sends the sensor reading data to the backend.
-
-    This function posts the sensor reading data to a specified backend URL
-    in JSON format. It logs a success message if the operation succeeds,
-    and logs appropriate error messages if any exceptions occur during the
-    process.
+    Send a sensor reading to the backend server.
 
     Parameters
     ----------
     sensor_reading : SensorReading
-        The sensor reading object that contains the measurement data to
-        be sent to the backend. This object should have a `model_dump_json`
-        method that provides a JSON representation of the sensor reading.
+        The sensor reading object to be sent.
+    sensor_id : int
+        The id of the sensor that generated the reading.
+
+    Returns
+    -------
+    None
 
     Raises
     ------
-    requests.HTTPError
-        If an HTTP error occurs during the POST request.
+    HTTPError
+        If the HTTP response from the backend server indicates an error.
     Exception
-        If any other error occurs during the process.
-
-    Examples
-    --------
-    >>> sensor_reading = SensorReading.new_reading(value=23.5)
-    >>> send_to_backend(sensor_reading)
+        If any other error occurs during the request.
 
     Notes
     -----
-    - This function uses the `requests` library to send HTTP POST requests.
-    - Ensure that `settings.backend_sensor_url` is properly configured with
-      the backend endpoint URL.
-    - This function relies on the `model_dump_json` method of the
-      `SensorReading` object to serialize the data to JSON format.
+    This function sends a POST request to the backend server with the sensor reading data.
+    The request includes headers specifying the content type and the data in JSON format.
+    If the request is successful, a debug message is logged.
+    If an HTTP error occurs, an error message is logged.
+    If any other exception occurs, an error message is logged.
+
+    Examples
+    --------
+    >>> sensor_reading = SensorReading(value=42.0, timestamp=time.time_ns())
+    >>> send_to_backend(sensor_reading, sensor_id=123)
+    Successfully sent sensor reading to backend.
     """
 
     try:
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        sensor_url_path = (
+            settings.backend_sensor_url + f"/v1/sensors/flowmeters/{sensor_id}/reading"
+        )
 
         response = requests.post(
-            settings.backend_sensor_url,
+            sensor_url_path,
             headers=headers,
             data=sensor_reading.model_dump_json(),
         )
@@ -133,13 +147,20 @@ def main():
 
             # Main loop to read sensor data and send it to the backend
             while running:
-                sensor_reading = read_sensor(ser)
-                if sensor_reading:
-                    send_to_backend(sensor_reading)
-                time.sleep(settings.read_interval_s)  # Delay for the specified interval
+                start_time = time.time()
+                for i in range(settings.sensor_count):
+                    sensor_reading = read_sensor(ser, i)
+                    if sensor_reading:
+                        send_to_backend(sensor_reading, i)
+
+                remaining_time = settings.read_interval_s - (time.time() - start_time)
+                if remaining_time > 0:
+                    time.sleep(remaining_time)  # Delay for the specified interval
+
     except Exception as e:
         # Log any exceptions that occur during the main loop
         logging.error("An error occurred: %s", str(e))
+
     finally:
         # Ensure the serial port is closed when the program exits
         logging.info("Serial port closed. Exiting...")
