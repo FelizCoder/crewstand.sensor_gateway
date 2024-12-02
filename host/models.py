@@ -1,4 +1,5 @@
 import time
+from typing import TypeAlias
 from pydantic import BaseModel, Field
 
 
@@ -16,3 +17,6 @@ class SensorReading(BaseModel):
     def new_reading(cls, value: float) -> "SensorReading":
         timestamp_ns = time.time_ns()
         return cls(value=value, timestamp_ns=timestamp_ns)
+
+
+ValueRange: TypeAlias = tuple[float, float]
