@@ -5,7 +5,7 @@ import time
 import requests
 
 from config import settings
-from models import SensorReading
+from models import SensorReading, ValueRange
 
 
 # Configure logging
@@ -24,7 +24,61 @@ def signal_handler(sig, frame):
     logging.info("Interrupt received. Stopping...")
 
 
-def read_sensor(ser: serial.Serial, sensor_id: int) -> SensorReading:
+def interpolate_measurement(
+    voltage: float, voltage_range: ValueRange, measurement_range: ValueRange
+) -> float:
+    """
+    Linearly interpolate a measurement value based on the given voltage and specified ranges.
+
+    This function performs a linear interpolation to convert a voltage reading
+    into a measurement value (e.g., flow rate) based on provided voltage
+    and measurement ranges.
+
+    Parameters
+    ----------
+    voltage : float
+        The voltage value from the sensor.
+    voltage_range : tuple[float, float]
+        The minimum and maximum voltage values that the sensor can output.
+    measurement_range : tuple[float, float]
+        The minimum and maximum measurement values that correspond to the
+        voltage range.
+
+    Returns
+    -------
+    float
+        The interpolated measurement value.
+
+    Notes
+    -----
+    The interpolation formula used is:
+
+    .. math::
+        measurement = (voltage - voltage_{min}) \times \frac{(measurement_{max} - measurement_{min})}{(voltage_{max} - voltage_{min})} + measurement_{min}
+
+    where `voltage_{min}` and `voltage_{max}` are the minimum and maximum
+    values of the voltage range, and `measurement_{min}` and `measurement_{max}`
+    are the minimum and maximum values of the measurement range.
+
+    Examples
+    --------
+    >>> voltage = 2.5
+    >>> voltage_range = (0.0, 5.0)
+    >>> measurement_range = (0.0, 100.0)
+    >>> interpolate_measurement(voltage, voltage_range, measurement_range)
+    50.0
+    """
+
+    slope = (measurement_range[1] - measurement_range[0]) / (
+        voltage_range[1] - voltage_range[0]
+    )
+    offset = measurement_range[0]
+    measurement = (voltage - voltage_range[0]) * slope + offset
+
+    return measurement
+
+
+def read_sensor_voltage(ser: serial.Serial, sensor_id: int) -> float:
     """
     Reads the sensor data from the serial port.
 
@@ -46,16 +100,15 @@ def read_sensor(ser: serial.Serial, sensor_id: int) -> SensorReading:
 
     try:
         logging.debug("Requesting sensor reading...")
-        sensor_request_command = bytes(sensor_id)
-        ser.write(sensor_request_command)
+        sensor_bytes = b"%d" % sensor_id
+        ser.write(sensor_bytes)
         response = ser.read_until().decode("utf-8").strip()
 
         # Validate and convert the response
         if response:
-            value = float(response)
-            reading = SensorReading.new_reading(value=value)
+            voltage = float(response)
             logging.debug("Sensor response: %s", response)
-            return reading
+            return voltage
         else:
             logging.error("Empty response received from sensor")
 
@@ -108,14 +161,13 @@ def send_to_backend(sensor_reading: SensorReading, sensor_id: int) -> None:
 
     try:
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
-        sensor_url_path = (
-            settings.backend_sensor_url + f"/v1/sensors/flowmeters/{sensor_id}/reading"
-        )
+        sensor_url_path = f"{settings.backend_sensor_url}v1/sensors/flowmeters/{sensor_id}/reading"
 
         response = requests.post(
             sensor_url_path,
             headers=headers,
             data=sensor_reading.model_dump_json(),
+            timeout=settings.read_interval_s,
         )
 
         # Raise an exception for HTTP error responses
@@ -149,9 +201,15 @@ def main():
             while running:
                 start_time = time.time()
                 for i in range(settings.sensor_count):
-                    sensor_reading = read_sensor(ser, i)
-                    if sensor_reading:
-                        send_to_backend(sensor_reading, i)
+                    sensor_voltage = read_sensor_voltage(ser, i)
+                    if sensor_voltage:
+                        measurement = interpolate_measurement(
+                            sensor_voltage,
+                            settings.voltage_range,
+                            settings.measurement_range[i],
+                        )
+                        measurement_reading = SensorReading.new_reading(measurement)
+                        send_to_backend(measurement_reading, i)
 
                 remaining_time = settings.read_interval_s - (time.time() - start_time)
                 if remaining_time > 0:

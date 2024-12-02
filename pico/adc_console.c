@@ -8,7 +8,8 @@ const float conversion_factor = 3.3f / (1 << 12);
 void printhelp()
 {
     puts("\nCommands:");
-    puts("s\t: Sample once");
+    puts("0\t: read ADC 0");
+    puts("1\t: read ADC 1");
 }
 
 void read_with_offset_correction(int adc_channel) {
@@ -18,8 +19,10 @@ void read_with_offset_correction(int adc_channel) {
     // Read Ground reference to correct offset
     adc_select_input(2);
     const uint32_t ground = adc_read();
+    // Ensure no overflow close to 0 V
+    const uint32_t offset = MIN(signal,ground);
     // correct the signal
-    const uint32_t corrected_signal = signal - ground;
+    const uint32_t corrected_signal = signal - offset;
     const float voltage = corrected_signal * conversion_factor;
     // Calculate and print Voltage to serial
     printf("%f\n", voltage);
@@ -45,6 +48,8 @@ int main(void)
 
 // initialize onboard LED default on
 #ifdef PICO_DEFAULT_LED_PIN
+    gpio_init(PICO_DEFAULT_LED_PIN);
+    gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
     gpio_put(PICO_DEFAULT_LED_PIN, 1);
 #endif
 
