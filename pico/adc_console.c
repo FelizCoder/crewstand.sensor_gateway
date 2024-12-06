@@ -4,6 +4,7 @@
 #include "hardware/adc.h"
 
 const float conversion_factor = 3.3f / (1 << 12);
+const int num_samples = 10;  // Define the number of samples to average
 
 void printhelp()
 {
@@ -13,20 +14,35 @@ void printhelp()
 }
 
 void read_with_offset_correction(int adc_channel) {
-    // Read Signal
-    adc_select_input(adc_channel);
-    const uint32_t signal = adc_read();
-    // Read Ground reference to correct offset
-    adc_select_input(2);
-    const uint32_t ground = adc_read();
+    uint16_t signal_sum = 0;
+    uint16_t ground_sum = 0;
+
+    // Take multiple samples and compute their sum
+    for (int i = 0; i < num_samples; i++) {
+        // Read Signal
+        adc_select_input(adc_channel);
+        signal_sum += adc_read();
+
+        // Read Ground reference to correct offset
+        adc_select_input(2);
+        ground_sum += adc_read();
+    }
+
+    // Calculate average
+    uint16_t signal = signal_sum / num_samples;
+    uint16_t ground = ground_sum / num_samples;
+
     // Ensure no overflow close to 0 V
-    const uint32_t offset = MIN(signal,ground);
-    // correct the signal
-    const uint32_t corrected_signal = signal - offset;
-    const float voltage = corrected_signal * conversion_factor;
+    uint16_t offset = MIN(signal, ground);
+
+    // Correct the signal
+    uint16_t corrected_signal = signal - offset;
+    float voltage = corrected_signal * conversion_factor;
+
     // Calculate and print Voltage to serial
     printf("%f\n", voltage);
 }
+
 
 int main(void)
 {
