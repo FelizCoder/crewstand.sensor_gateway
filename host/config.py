@@ -15,6 +15,7 @@ env_file = os.path.join(
 
 class Config(BaseSettings):
     backend_sensor_url: HttpUrl
+    log_level: str = "INFO"
     read_interval_s: float = Field(
         default=1,
         gt=0,
