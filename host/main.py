@@ -10,7 +10,7 @@ from models import SensorReading, ValueRange
 
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=settings.log_level,
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
@@ -78,7 +78,7 @@ def interpolate_measurement(
     return measurement
 
 
-def read_sensor_voltage(ser: serial.Serial, sensor_id: int) -> float:
+def read_sensor_voltages(ser: serial.Serial) -> list[float]:
     """
     Reads the sensor data from the serial port.
 
@@ -99,15 +99,18 @@ def read_sensor_voltage(ser: serial.Serial, sensor_id: int) -> float:
     """
 
     try:
+        if settings.sensor_count == 1:
+            sensor_bytes = b"0"
+        else:
+            sensor_bytes = b"s"
         logging.debug("Requesting sensor reading...")
-        sensor_bytes = b"%d" % sensor_id
         ser.write(sensor_bytes)
-        response = ser.read_until().decode("utf-8").strip()
+        response = ser.read_until().decode("utf-8").strip().split(",")
+        logging.debug("Sensor response: %s", response)
 
         # Validate and convert the response
         if response:
-            voltage = float(response)
-            logging.debug("Sensor response: %s", response)
+            voltage = [float(reading) for reading in response]
             return voltage
         else:
             logging.error("Empty response received from sensor")
@@ -161,7 +164,9 @@ def send_to_backend(sensor_reading: SensorReading, sensor_id: int) -> None:
 
     try:
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
-        sensor_url_path = f"{settings.backend_sensor_url}v1/sensors/flowmeters/{sensor_id}/reading"
+        sensor_url_path = (
+            f"{settings.backend_sensor_url}v1/sensors/flowmeters/{sensor_id}/reading"
+        )
 
         response = requests.post(
             sensor_url_path,
@@ -199,19 +204,24 @@ def main():
 
             # Main loop to read sensor data and send it to the backend
             while running:
-                start_time = time.time()
-                for i in range(settings.sensor_count):
-                    sensor_voltage = read_sensor_voltage(ser, i)
-                    if sensor_voltage:
+                start_time = time.time_ns()
+                sensor_voltages = read_sensor_voltages(ser)
+                if sensor_voltages:
+                    for i in range(settings.sensor_count):
                         measurement = interpolate_measurement(
-                            sensor_voltage,
+                            sensor_voltages[i],
                             settings.voltage_range,
                             settings.measurement_range[i],
                         )
-                        measurement_reading = SensorReading.new_reading(measurement)
+                        measurement_reading = SensorReading(
+                            value=measurement,
+                            timestamp_ns=start_time,
+                        )
                         send_to_backend(measurement_reading, i)
 
-                remaining_time = settings.read_interval_s - (time.time() - start_time)
+                remaining_time = settings.read_interval_s - (
+                    time.time_ns() - start_time
+                ) / 1e9
                 if remaining_time > 0:
                     time.sleep(remaining_time)  # Delay for the specified interval
 
