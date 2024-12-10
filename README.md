@@ -12,6 +12,7 @@ This repository is a component of the CrewStand project, focused on interfacing 
     - [Running with Python](#running-with-python)
     - [Running with Docker](#running-with-docker)
   - [Usage](#usage)
+    - [Using the Mock Serial Module](#using-the-mock-serial-module)
   - [Sensor Connections](#sensor-connections)
   - [Defining Sensor Ranges](#defining-sensor-ranges)
     - [Setting Voltage and Measurement Ranges](#setting-voltage-and-measurement-ranges)
@@ -78,7 +79,7 @@ The CrewStand Pico Interface repository contains the following components:
    | `read_interval_s` | Interval between reads in seconds | `0.5` |
    | `sensor_count` | Number of sensors to read. 1 or 2 | `2` |
    | `serial_baud_rate` | Baud rate for serial communication | `250000` |
-   | `serial_port` | Serial port to connect to | `"/dev/ttyACM0"` |
+   | `serial_port` | Serial port to connect to | `mock` |
    | `voltage_range` | Voltage range for sensors | `[0,3.3]` |
 
 3. **Start the Host Script**
@@ -115,6 +116,22 @@ The CrewStand Pico Interface repository contains the following components:
 - **Commands:**
   - The firmware on the Pico listens for commands to sample sensor data (`'0'` for sensor 0 and `'1'` for sensor 1). These commands are sent by the host script to initiate a reading for the respective sensor.
   - Ground reference is utilized for offset correction before calculating the final sensor value.
+
+### Using the Mock Serial Module
+
+To use the mock serial module, set `serial_port` to `"mock"` in your `.env` file. This will simulate a serial connection and generate mock sensor readings. In this mode, the host script will not attempt to communicate on the serial port. The mock readings are generated based on a sine wave, allowing for a simple demonstration of the sensor gateway's functionality without the need for actual sensor hardware.
+
+**Example `.env` file:**
+```plaintext
+backend_sensor_url='http://localhost:5000'
+log_level='INFO'
+measurement_range='[[0.0,1.0], [0,100]]'
+read_interval_s='0.5'
+sensor_count='2'
+serial_baud_rate='250000'
+serial_port='mock'
+voltage_range='[-1,1]'
+```
 
 ## Sensor Connections
 
