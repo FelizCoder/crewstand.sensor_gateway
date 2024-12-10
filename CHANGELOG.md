@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.1.0](https://github.com/FelizCoder/crewstand.sensor_gateway/compare/v2.0.0...v2.1.0) (2024-12-10)
+
+
+### Features
+
+* **adc:** add case and logic read both sensors at once ([4c3d50f](https://github.com/FelizCoder/crewstand.sensor_gateway/commit/4c3d50fd5bdfdd9db36cb149c86eaf5e14bb9e9d)), closes [#12](https://github.com/FelizCoder/crewstand.sensor_gateway/issues/12)
+* **adc:** implement sampling and averaging for ADC readings ([3c07d18](https://github.com/FelizCoder/crewstand.sensor_gateway/commit/3c07d1862790f7ba672e07f0dc8a91346f89805f)), closes [#11](https://github.com/FelizCoder/crewstand.sensor_gateway/issues/11)
+* **host:** enhance sensor reading and logging functionality ([63105cf](https://github.com/FelizCoder/crewstand.sensor_gateway/commit/63105cf49d90c31af2a1752a9d43defd3f983f57)), closes [#12](https://github.com/FelizCoder/crewstand.sensor_gateway/issues/12)
+
 ## [2.0.0](https://github.com/FelizCoder/crewstand.sensor_gateway/compare/v1.0.0...v2.0.0) (2024-12-03)
 
 
