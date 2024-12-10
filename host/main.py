@@ -6,7 +6,10 @@ import requests
 from config import settings
 from models import SensorReading, ValueRange
 
-from serial_module import SerialModule as SensorReader
+if settings.serial_port == "mock":
+    from serial_module_mock import SerialModuleMock as SensorReader
+else:
+    from serial_module import SerialModule as SensorReader
 
 # Configure logging
 logging.basicConfig(
