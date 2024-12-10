@@ -1,4 +1,3 @@
-import serial
 import logging
 import signal
 import time
@@ -7,6 +6,7 @@ import requests
 from config import settings
 from models import SensorReading, ValueRange
 
+from serial_module import SerialModule as SensorReader
 
 # Configure logging
 logging.basicConfig(
@@ -78,53 +78,6 @@ def interpolate_measurement(
     return measurement
 
 
-def read_sensor_voltages(ser: serial.Serial) -> list[float]:
-    """
-    Reads the sensor data from the serial port.
-
-    Args:
-        ser (serial.Serial): The serial object connected to the sensor.
-        sensor_id (int): The ID of the sensor to read.
-
-    Returns:
-        SensorReading or None: The sensor reading object or None if the reading failed.
-
-    Raises:
-        ValueError: If the sensor data received is not a valid float.
-        Exception: If any other error occurs during the reading process.
-
-    Notes:
-        This function sends a command to the sensor to request a reading and then waits for a response.
-        If the response is empty or cannot be converted to a float, an error is logged and None is returned.
-    """
-
-    try:
-        if settings.sensor_count == 1:
-            sensor_bytes = b"0"
-        else:
-            sensor_bytes = b"s"
-        logging.debug("Requesting sensor reading...")
-        ser.write(sensor_bytes)
-        response = ser.read_until().decode("utf-8").strip().split(",")
-        logging.debug("Sensor response: %s", response)
-
-        # Validate and convert the response
-        if response:
-            voltage = [float(reading) for reading in response]
-            return voltage
-        else:
-            logging.error("Empty response received from sensor")
-
-    except ValueError:
-        logging.error("Invalid sensor data received: %s", response)
-
-    except Exception as e:
-        logging.error("Error reading sensor: %s", str(e))
-
-    # Return None in case of error or invalid data
-    return None
-
-
 def send_to_backend(sensor_reading: SensorReading, sensor_id: int) -> None:
     """
     Send a sensor reading to the backend server.
@@ -190,47 +143,46 @@ def main():
     # Register the SIGINT handler to gracefully handle interrupt signals
     signal.signal(signal.SIGINT, signal_handler)
     try:
-        # Configure the serial port with settings from the configuration
-        with serial.Serial(
+        # Create a SensorReader instance
+        sensor_reader = SensorReader(
             port=settings.serial_port,
             baudrate=settings.serial_baud_rate,
-            parity=serial.PARITY_NONE,
-            stopbits=serial.STOPBITS_ONE,
-            bytesize=serial.EIGHTBITS,
             timeout=settings.read_interval_s,
-        ) as ser:
+            sensor_count=settings.sensor_count,
+        )
+        sensor_reader.open()  # Open the serial port
 
-            logging.info("Starting periodic sensor reading...")
+        logging.info("Starting periodic sensor reading...")
 
-            # Main loop to read sensor data and send it to the backend
-            while running:
-                start_time = time.time_ns()
-                sensor_voltages = read_sensor_voltages(ser)
-                if sensor_voltages:
-                    for i in range(settings.sensor_count):
-                        measurement = interpolate_measurement(
-                            sensor_voltages[i],
-                            settings.voltage_range,
-                            settings.measurement_range[i],
-                        )
-                        measurement_reading = SensorReading(
-                            value=measurement,
-                            timestamp_ns=start_time,
-                        )
-                        send_to_backend(measurement_reading, i)
+        # Main loop
+        while running:
+            start_time = time.time_ns()
+            sensor_voltages = sensor_reader.read_sensor_voltages()
+            if sensor_voltages:
+                for i in range(settings.sensor_count):
+                    measurement = interpolate_measurement(
+                        sensor_voltages[i],
+                        settings.voltage_range,
+                        settings.measurement_range[i],
+                    )
+                    measurement_reading = SensorReading(
+                        value=measurement,
+                        timestamp_ns=start_time,
+                    )
+                    send_to_backend(measurement_reading, i)
 
-                remaining_time = settings.read_interval_s - (
-                    time.time_ns() - start_time
-                ) / 1e9
+                remaining_time = (
+                    settings.read_interval_s - (time.time_ns() - start_time) / 1e9
+                )
                 if remaining_time > 0:
                     time.sleep(remaining_time)  # Delay for the specified interval
 
     except Exception as e:
         # Log any exceptions that occur during the main loop
         logging.error("An error occurred: %s", str(e))
-
     finally:
         # Ensure the serial port is closed when the program exits
+        sensor_reader.close()
         logging.info("Serial port closed. Exiting...")
 
 
