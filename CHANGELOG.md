@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/FelizCoder/crewstand.sensor_gateway/compare/v2.1.0...v2.2.0) (2024-12-11)
+
+
+### Features
+
+* Introduce Mock Serial Module for Testing and Update.env.example ([d4737e5](https://github.com/FelizCoder/crewstand.sensor_gateway/commit/d4737e5f468cb914ed03d961e63af6f9969a4e69)), closes [#5](https://github.com/FelizCoder/crewstand.sensor_gateway/issues/5)
+
 ## [2.1.0](https://github.com/FelizCoder/crewstand.sensor_gateway/compare/v2.0.0...v2.1.0) (2024-12-10)
 
 
