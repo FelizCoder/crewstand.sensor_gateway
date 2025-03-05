@@ -1,6 +1,7 @@
+# serial_module.py
+
 import serial
 import logging
-
 
 class SerialModule:
     def __init__(self, port, baudrate, timeout, sensor_count):
@@ -10,15 +11,16 @@ class SerialModule:
         self.ser = None
 
         if sensor_count == 1:
-            self.request_bytes = b"0"
+            self.request_command = b"0"
         else:
-            self.request_bytes = b"s"
+            self.request_command = b"s"
 
     def open(self):
         try:
             self.ser = serial.Serial(
                 port=self.port,
                 baudrate=self.baudrate,
+                # Default parity and stopbits settings align with common UART configuration
                 parity=serial.PARITY_NONE,
                 stopbits=serial.STOPBITS_ONE,
                 bytesize=serial.EIGHTBITS,
@@ -38,15 +40,18 @@ class SerialModule:
         try:
             if not self.ser:
                 raise ValueError("Serial port not opened")
-            self.ser.write(self.request_bytes)
+            self.ser.write(self.request_command)
             response = self.ser.read_until().decode("utf-8").strip().split(",")
             logging.debug(f"Sensor response: {response}")
             if response:
-                return [float(reading) for reading in response]
+                try:
+                    return [float(reading) for reading in response]
+                except ValueError:
+                    logging.error("Invalid floating-point value(s) in sensor response")
+                    return None
             else:
                 logging.error("Empty response received from sensor")
-        except ValueError as e:
-            logging.error(f"Invalid sensor data received: {str(e)}")
+                return None
         except Exception as e:
             logging.error(f"Error reading sensor: {str(e)}")
-        return None
+            return None
