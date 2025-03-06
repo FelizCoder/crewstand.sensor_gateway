@@ -1,10 +1,30 @@
+
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
+#include "hardware/uart.h"
 #include "hardware/adc.h"
+
+// UART defines
+#define UART_ID uart0
+#define BAUD_RATE 250000
+
+// Pins can be changed, see the GPIO function select table in the datasheet for information on GPIO assignments
+#define UART_TX_PIN 16
+#define UART_RX_PIN 17
 
 const float conversion_factor = 3.3f / (1 << 12);
 const int num_samples = 10; // Define the number of samples to average
+
+void init_uart()
+{
+    // Set up our UART
+    uart_init(UART_ID, BAUD_RATE);
+    // Set the TX and RX pins by using the function select on the GPIO
+    // Set datasheet for more information on function select
+    gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
+    gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
+}
 
 void printhelp()
 {
@@ -66,6 +86,7 @@ void print_both_with_offset_correction()
 int main(void)
 {
     stdio_init_all();
+
     adc_init();
     adc_set_temp_sensor_enabled(false);
 
@@ -81,8 +102,8 @@ int main(void)
         }
     }
 
-// initialize onboard LED default on
 #ifdef PICO_DEFAULT_LED_PIN
+    // initialize onboard LED default on
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
     gpio_put(PICO_DEFAULT_LED_PIN, 1);
@@ -93,9 +114,8 @@ int main(void)
     gpio_set_dir(23, GPIO_OUT);
     gpio_put(23, 1);
 
-    printf("\n===========================\n");
-    printf("RP2040 ADC and Test Console\n");
-    printf("===========================\n");
+    init_uart();
+
     printhelp();
 
     while (1)
