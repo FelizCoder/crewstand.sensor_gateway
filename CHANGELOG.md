@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/FelizCoder/crewstand.sensor_gateway/compare/v2.2.0...v2.3.0) (2025-03-11)
+
+
+### Features
+
+* **pico:** add UART initialization and update UART configurations ([09dfbf1](https://github.com/FelizCoder/crewstand.sensor_gateway/commit/09dfbf1599c1d29d4fafeb93bec6e81324c191be)), closes [#19](https://github.com/FelizCoder/crewstand.sensor_gateway/issues/19)
+
 ## [2.2.0](https://github.com/FelizCoder/crewstand.sensor_gateway/compare/v2.1.0...v2.2.0) (2024-12-11)
 
 
