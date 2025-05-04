@@ -77,8 +77,9 @@ def interpolate_measurement(
     )
     offset = measurement_range[0]
     measurement = (voltage - voltage_range[0]) * slope + offset
+    clipped_measurement = max(measurement, measurement_range[0]) 
 
-    return measurement
+    return clipped_measurement
 
 
 def send_to_backend(sensor_reading: SensorReading, sensor_id: int) -> None:
