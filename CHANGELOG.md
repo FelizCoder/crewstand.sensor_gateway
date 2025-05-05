@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.1](https://github.com/FelizCoder/crewstand.sensor_gateway/compare/v2.3.0...v2.3.1) (2025-05-05)
+
+
+### Bug Fixes
+
+* **interpolate:** clip measurement value at lower bound ([c5fc022](https://github.com/FelizCoder/crewstand.sensor_gateway/commit/c5fc02284bf3f74a1dc99040971bf8185b936f61)), closes [#22](https://github.com/FelizCoder/crewstand.sensor_gateway/issues/22)
+
 ## [2.3.0](https://github.com/FelizCoder/crewstand.sensor_gateway/compare/v2.2.0...v2.3.0) (2025-03-11)
 
 
